@@ -1,6 +1,6 @@
 #!/bin/python
 
-import socket, time, subprocess, os
+import socket, time, subprocess, os, traceback
 
 class API(object):
   def __init__(self, directory, password):
@@ -35,13 +35,14 @@ class API(object):
   def start(self):
     print "API running on port 4096."
     print "Routes:"
+    client_tries = 0
     for key, value in self.routes.iteritems():
       print "\t" + key
     while self.running:
       try:
         self.server.settimeout(10)
         client, address = self.server.accept()
-        print "Connection from " + address
+        print address
         client.settimeout(10)
         data = client.recv(4096)
         if not data:
@@ -50,22 +51,26 @@ class API(object):
 	print "RECV: " + data
         lines = data.split("\n")
         init = lines[0].split(" ")
+
+        # Default
+        response = self.respond("404", "Not Found", "<h1>404 Not Found</h1>")
         if len(init) < 3:
-          response = self.respond(400, "Bad Request", "<h1>400 Bad Request</h1>")
+          response = self.respond("400", "Bad Request", "<h1>400 Bad Request</h1>")
         else:
           route = init[0] + init[1]
           clean_path = self.directory + init[1].replace("..", "")
           if route in self.routes:
-            response = self.respond(200, "OK", self.routes[route]())
+            response = self.respond("200", "OK", self.routes[route]())
           elif os.path.isfile(clean_path):
             with open(clean_path, "r") as f:
-              response = self.respond(200, "OK", f.read())
-          else:
-            reponse = self.respond(404, "Not Found", "<h1>404 Not Found</h1>")
+              response = self.respond("200", "OK", f.read())
         client.send(response)
         client.close()
-      except Exception as e:
-        raise e
+      except:
+        client_tries += 1
+        if client_tries > 3:
+          running = false
+	traceback.print_exc()
 
 if __name__ == "__main__":
   api = API("./", "aq12ws")
@@ -83,7 +88,7 @@ if __name__ == "__main__":
       return "Goodbye!"
     return "I'm alive!"
     
-  api.route("POST", "/die", die)
+  api.route("GET", "/die", die)
 
   api.start()
   
