@@ -40,7 +40,6 @@ class API(object):
       print "\t" + key
     while self.running:
       try:
-        self.server.settimeout(10)
         client, address = self.server.accept()
         print address
         client.settimeout(10)
@@ -50,6 +49,7 @@ class API(object):
           continue
 	print "RECV: " + data
         lines = data.split("\n")
+	print data.split("\r\n\r\n")
         init = lines[0].split(" ")
 
         # Default
@@ -69,7 +69,7 @@ class API(object):
       except:
         client_tries += 1
         if client_tries > 3:
-          running = false
+          running = False
 	traceback.print_exc()
 
 if __name__ == "__main__":
