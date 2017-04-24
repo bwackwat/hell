@@ -1,0 +1,9 @@
+{
+  "port":2048,
+  "public-directory":"html",
+  "api-password":"aq12ws",
+
+  "pgadmin":"postgres",
+  "pgpassword":"aq12ws",
+  "pgdb":"webservice"
+}
