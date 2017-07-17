@@ -5,5 +5,8 @@
 
   "pgadmin":"postgres",
   "pgpassword":"aq12ws",
-  "pgdb":"webservice"
+  "pgdb":"webservice",
+
+  "number_of_total_connections":10,
+  "number_of_threads":2
 }
