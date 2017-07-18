@@ -1,0 +1,14 @@
+{% include "header.html" %}
+	<h1>Route Hell</h1>
+	<hr>
+	{% for path, route in routes.items() %}
+		<h4>{{ path }}</h4>
+		<form action={{ route.path }} method="{{ route.method }}">
+			{% for key, value in route.requires.items() %}
+				<label for="{{ key }}">{{ key }}, {{ value }}: </label>
+				<input type="text" name="{{ key }}"><br>
+			{% endfor %}
+			<input type="submit" value="Go">
+		</form>
+	{% endfor %}
+{% include "footer.html" %}

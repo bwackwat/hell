@@ -2,7 +2,7 @@
 
 import socket, time, subprocess, os, traceback, queue, threading
 
-import psycopg2
+import psycopg2, jinja2
 
 import util
 
@@ -26,6 +26,13 @@ class DB(object):
 				self.tables[table[1]] = [table_columns[3] for table_columns in self.execute("SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '" + table[1] + "';")]
 		for key, value in self.tables.items():
 			print(key + ": " + str(value))
+
+class Route(object):
+	def __init__(self, method, path, callback, requires={}):
+		self.method = method
+		self.path = path
+		self.callback = callback
+		self.requires = requires
 
 class API(object):
 	def __init__(self):
@@ -54,6 +61,9 @@ class API(object):
 			thread.setDaemon(True)
 			thread.start()
 			self.threads.append(thread)
+
+	def route(self, method, path, callback, requires={}):
+		self.routes[method + " " + path] = Route(method, path, callback, requires)
 
 	def exit(self):
 		self.running = False
@@ -88,7 +98,7 @@ class API(object):
 					clean_path = self.directory + http_header[1].replace("..", "")
 
 					if route in self.routes:
-						response = self.respond("200", "OK", self.routes[route]())
+						response = self.respond("200", "OK", self.routes[route].callback())
 					elif os.path.isdir(clean_path):
 						clean_path = os.path.join(clean_path, "index.html")
 					if os.path.isfile(clean_path):
@@ -111,14 +121,11 @@ class API(object):
 			header_text += key + ": " + value + "\r\n"
 		return "HTTP/1.1 " + str(status) + " " + message + "\r\n" + header_text + "\r\n\r\n" + content
 
-	def route(self, method, path, callback):
-		self.routes[method + " " + path] = callback
-
 	def start(self):
 		print("API running on port " + str(self.port) + ".")
 		print("Routes:")
-		for key, value in self.routes.items():
-			print("\t" + key)
+		for path, route in self.routes.items():
+			print("\t" + path)
 
 		server_tries = 0
 		while self.running:
@@ -131,6 +138,13 @@ class API(object):
 					self.exit()
 				traceback.print_exc()
 
+jinja2_env = jinja2.Environment(
+	loader=jinja2.FileSystemLoader("jinja2_templates/"),
+	autoescape=jinja2.select_autoescape(["html"])
+)
+def render_template(template, **kwargs):
+	return jinja2_env.get_template(template).render(kwargs)
+
 if __name__ == "__main__":
 	api = API()
 
@@ -138,14 +152,17 @@ if __name__ == "__main__":
 		p = subprocess.Popen("ps -aux", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		o, e = p.communicate()
 		return o.decode("utf-8")
-
 	api.route("GET", "/procs", procs)
 
 	def die():
 		api.running = False
 		return "<h1>Goodbye!</h1>"
-
 	api.route("GET", "/die", die)
+
+	routes_html = render_template("routes.html", routes=api.routes)
+	def routes():
+		return routes_html
+	api.route("GET", "/routes", routes)
 
 	db = DB()
 
